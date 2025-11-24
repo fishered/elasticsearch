@@ -416,6 +416,9 @@ public class RestController implements HttpServerTransport.Dispatcher {
                 threadContext.putHeader(SYSTEM_INDEX_ACCESS_CONTROL_HEADER_KEY, Boolean.TRUE.toString());
             }
 
+            /**
+             * 这里的handler是否已经做好wrapper了？
+             */
             handler.handleRequest(request, responseChannel, client);
         } catch (Exception e) {
             responseChannel.sendResponse(new RestResponse(responseChannel, e));

@@ -80,3 +80,5 @@
 # Allow wildcard deletion of indices:
 #
 #action.destructive_requires_name: false
+path.data: C:\\workSpace\\es_out
+path.logs: C:\\workSpace\\es_out

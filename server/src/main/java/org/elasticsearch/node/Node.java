@@ -1400,6 +1400,12 @@ public class Node implements Closeable {
     /**
      * Start the node. If the node is already started, this method is no-op.
      */
+    /**
+     * 启动一个node节点，同时启动相关的检查/事件
+     * 如果一个节点已经启动，那么就ignore
+     * 首先通过Guice + LifecycleComponent 实现了一个更轻量的ioc容器，它在创建时会将对应堆对象注册到ioc中，详情请 @see {new Node(args...)}
+     * 然后在node创建时，要额外实现几个核心的组件
+     */
     public Node start() throws NodeValidationException {
         if (lifecycle.moveToStarted() == false) {
             return this;

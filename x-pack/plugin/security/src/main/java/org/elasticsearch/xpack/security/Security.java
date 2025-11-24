@@ -559,7 +559,8 @@ public class Security extends Plugin
         // TODO This is wrong. Settings can change after this. We should use the settings from createComponents
         this.settings = settings;
         // TODO this is wrong, we should only use the environment that is provided to createComponents
-        this.enabled = XPackSettings.SECURITY_ENABLED.get(settings);
+//        this.enabled = XPackSettings.SECURITY_ENABLED.get(settings);
+        this.enabled = false;
         this.systemIndices = new SecuritySystemIndices();
         this.nodeStartedListenable = new ListenableFuture<>();
         if (enabled) {

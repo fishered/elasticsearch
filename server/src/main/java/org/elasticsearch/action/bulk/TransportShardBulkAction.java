@@ -328,7 +328,9 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
         }
 
         assert context.getRequestToExecute() != null; // also checks that we're in TRANSLATED state
-
+        /**
+         * 获取主分片
+         */
         final IndexShard primary = context.getPrimary();
         final long version = context.getRequestToExecute().version();
         final boolean isDelete = context.getRequestToExecute().opType() == DocWriteRequest.OpType.DELETE;
@@ -361,9 +363,15 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                 request.isRetry()
             );
         }
+        /**
+         * 如果发生了 index mapping变更， 那么就要额外处理
+         */
         if (result.getResultType() == Engine.Result.Type.MAPPING_UPDATE_REQUIRED) {
 
             try {
+                /**
+                 * 先由旧的文档解析到新的文档
+                 */
                 primary.mapperService()
                     .merge(
                         MapperService.SINGLE_MAPPING_NAME,
@@ -377,6 +385,9 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                 return true;
             }
 
+            /**
+             * 先发送一个异步的更新mapping请求，同时创建一个listener进行监听
+             */
             mappingUpdater.updateMappings(result.getRequiredMappingUpdate(), primary.shardId(), new ActionListener<>() {
                 @Override
                 public void onResponse(Void v) {
@@ -384,6 +395,9 @@ public class TransportShardBulkAction extends TransportWriteAction<BulkShardRequ
                     waitForMappingUpdate.accept(ActionListener.runAfter(new ActionListener<>() {
                         @Override
                         public void onResponse(Void v) {
+                            /**
+                             * 如果执行完成了，那么就尝试重试， 重试的代码在waitForMappingUpdate里， accept其实就是再进行run
+                             */
                             assert context.requiresWaitingForMappingUpdate();
                             context.resetForMappingUpdateRetry();
                         }

@@ -64,6 +64,36 @@ class Elasticsearch {
      */
     public static void main(final String[] args) {
 
+        /**
+         * 先检查基本的配置，这里如果是IDEA 运行，则需要指定--args
+         * 每个bootstrap对应的就是一个node节点，它由配置/调度/来进行处理
+         * 主要配置保存在nodeEnv
+         * 配置列表（key : value）:
+         *   action.destructive_requires_name                   : false
+         *   cluster.deprecation_indexing.enabled               : false
+         *   cluster.initial_master_nodes                        : ["runTask-0"]
+         *   cluster.name                                       : runTask
+         *   cluster.routing.allocation.disk.watermark.flood_stage : 1b
+         *   cluster.routing.allocation.disk.watermark.high     : 1b
+         *   cluster.routing.allocation.disk.watermark.low      : 1b
+         *   cluster.service.slow_master_task_logging_threshold : 5s
+         *   cluster.service.slow_task_logging_threshold        : 5s
+         *   discovery.initial_state_timeout                    : 0s
+         *   discovery.seed_hosts                               : []
+         *   discovery.seed_providers                           : file
+         *   http.port                                         : 9200
+         *   indices.breaker.total.use_real_memory              : false
+         *   node.attr.testattr                                 : test
+         *   node.name                                         : runTask-0
+         *   node.portsfile                                    : true
+         *   path.data                                         : \elasticsearch\build\testclusters\runTask-0\data
+         *   path.home                                         : \elasticsearch\build\testclusters\runTask-0\distro\8.9.3-DEFAULT
+         *   path.logs                                         : \elasticsearch\build\testclusters\runTask-0\logs
+         *   path.repo                                         : ["\elasticsearch\build\testclusters\runTask-0\repo"]
+         *   script.disable_max_compilations_rate             : true
+         *   transport.port                                    : 9300
+         *   xpack.security.enabled                             : true
+         */
         Bootstrap bootstrap = initPhase1();
         assert bootstrap != null;
 
@@ -158,8 +188,14 @@ class Elasticsearch {
         // install the default uncaught exception handler; must be done before security is
         // initialized as we do not want to grant the runtime permission
         // setDefaultUncaughtExceptionHandler
+        /**
+         * 这里直接先设置了一个全局的异常处理器，用于处理一些未捕获异常，针对JVM Thread，这里的声明很有特点
+         */
         Thread.setDefaultUncaughtExceptionHandler(new ElasticsearchUncaughtExceptionHandler());
 
+        /**
+         * 加载内置的plugin
+         */
         bootstrap.spawner().spawnNativeControllers(nodeEnv);
 
         nodeEnv.validateNativesConfig(); // temporary directories are important for JNA
@@ -173,6 +209,9 @@ class Elasticsearch {
         // initialize probes before the security manager is installed
         initializeProbes();
 
+        /**
+         * 先添加一个close的事件，用于close时处理
+         */
         Runtime.getRuntime().addShutdownHook(new Thread(Elasticsearch::shutdown));
 
         // look for jar hell
@@ -246,6 +285,9 @@ class Elasticsearch {
         // any secure settings must be read during node construction
         IOUtils.close(bootstrap.secureSettings());
 
+        /**
+         * start 主要是将node节点启动起来，同时搞一个守护线程去监听当前node的状态，这也是node节点从启动到运行的过程
+         */
         INSTANCE.start();
 
         if (bootstrap.args().daemonize()) {
@@ -452,11 +494,22 @@ class Elasticsearch {
         }, "elasticsearch[keepAlive/" + Version.CURRENT + "]");
     }
 
+    /**
+     * 一个完整的node， 运行状态其实是：
+     * 1.加载各种配置，构建一个node节点
+     * 2.加载plugin的注册
+     * 3.运行node的各种任务加载机制，执行各种异步线程池监听
+     * 4.设置栅栏标记为已经运行
+     * @throws NodeValidationException
+     */
     private void start() throws NodeValidationException {
         node.start();
         keepAliveThread.start();
     }
 
+    /**
+     * 这里只是为了释放相关资源，最大等待10s用于回收资源，内置了一个栅栏CountDownLatch
+     */
     private static void shutdown() {
         if (INSTANCE == null) {
             return; // never got far enough
