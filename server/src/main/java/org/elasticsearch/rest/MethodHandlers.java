@@ -20,6 +20,9 @@ import java.util.Set;
 final class MethodHandlers {
 
     private final String path;
+    /**
+     * 当前handler的缓存
+     */
     private final Map<RestRequest.Method, Map<RestApiVersion, RestHandler>> methodHandlers;
 
     MethodHandlers(String path) {

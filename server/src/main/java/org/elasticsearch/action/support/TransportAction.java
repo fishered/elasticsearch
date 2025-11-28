@@ -39,6 +39,9 @@ public abstract class TransportAction<Request extends ActionRequest, Response ex
     /**
      * Use this method when the transport action should continue to run in the context of the current task
      */
+    /**
+     * 是不是看着很熟悉，真实执行的动作
+     */
     public final void execute(Task task, Request request, ActionListener<Response> listener) {
         final ActionRequestValidationException validationException;
         try {

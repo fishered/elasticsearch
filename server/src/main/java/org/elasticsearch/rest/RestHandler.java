@@ -22,6 +22,9 @@ import java.util.Objects;
 /**
  * Handler for REST requests
  */
+/**
+ * 所有的handler都需要实现它，它决定了这个handler如何被restController进行分发
+ */
 @FunctionalInterface
 public interface RestHandler {
 

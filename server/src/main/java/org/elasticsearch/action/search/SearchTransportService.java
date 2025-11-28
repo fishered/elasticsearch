@@ -69,6 +69,9 @@ import java.util.function.BiFunction;
  */
 public class SearchTransportService {
 
+    /**
+     * service是能力提供者，需要把access暴露给transportAction，那么就需要定义一些解析的规则
+     */
     public static final String FREE_CONTEXT_SCROLL_ACTION_NAME = "indices:data/read/search[free_context/scroll]";
     public static final String FREE_CONTEXT_ACTION_NAME = "indices:data/read/search[free_context]";
     public static final String CLEAR_SCROLL_CONTEXTS_ACTION_NAME = "indices:data/read/search[clear_scroll_contexts]";
