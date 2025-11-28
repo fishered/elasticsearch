@@ -15,8 +15,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public abstract class AbstractLifecycleComponent implements LifecycleComponent {
 
+    /**
+     * volatile的生命周期状态，支持状态流转；在node节点运行时，本身node也是一个携带生命周期的组件，它仍旧需要通过当前的state状态来识别
+     */
     protected final Lifecycle lifecycle = new Lifecycle();
 
+    /**
+     * 相关的前置/后置处理器监听器
+     */
     private final List<LifecycleListener> listeners = new CopyOnWriteArrayList<>();
 
     protected AbstractLifecycleComponent() {}

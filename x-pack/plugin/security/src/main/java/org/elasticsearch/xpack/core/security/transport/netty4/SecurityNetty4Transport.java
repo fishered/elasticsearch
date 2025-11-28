@@ -59,6 +59,10 @@ import static org.elasticsearch.xpack.core.XPackSettings.REMOTE_CLUSTER_SERVER_S
 /**
  * Implementation of a transport that extends the {@link Netty4Transport} to add SSL and IP Filtering
  */
+
+/**
+ * 当前类与SecurityNetty4ServerTransport 就代表它们是处理两个端口的类
+ */
 public class SecurityNetty4Transport extends Netty4Transport {
     private static final Logger logger = LogManager.getLogger(SecurityNetty4Transport.class);
 

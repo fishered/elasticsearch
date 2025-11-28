@@ -10,6 +10,9 @@ package org.elasticsearch.common.component;
 
 import org.elasticsearch.core.Releasable;
 
+/**
+ * es组件的生命周期实现，
+ */
 public interface LifecycleComponent extends Releasable {
 
     Lifecycle.State lifecycleState();

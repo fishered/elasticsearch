@@ -150,6 +150,9 @@ public class Netty4Transport extends TcpTransport {
             success = true;
         } finally {
             if (success == false) {
+                /**
+                 * 同理，如果没有成功就尝试try close并更新当前组件的状态
+                 */
                 doStop();
             }
         }
@@ -262,6 +265,9 @@ public class Netty4Transport extends TcpTransport {
         serverBootstrap.childOption(ChannelOption.SO_REUSEADDR, profileSettings.reuseAddress);
         serverBootstrap.validate();
 
+        /**
+         * 这就是节点server的注册表
+         */
         serverBootstraps.put(name, serverBootstrap);
     }
 

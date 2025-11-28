@@ -54,7 +54,14 @@ public class Netty4HttpPipeliningHandler extends ChannelDuplexHandler {
 
     private final Logger logger;
 
+    /**
+     * 当前最大的事件处理器
+     */
     private final int maxEventsHeld;
+    /**
+     * 这个队列是干嘛用的？
+     * 它是对于netty通信返回后，如果当前队列数已经超过maxEventsHeld，则将响应暂时放入该队列
+     */
     private final PriorityQueue<Tuple<? extends Netty4RestResponse, ChannelPromise>> outboundHoldingQueue;
 
     private record ChunkedWrite(PromiseCombiner combiner, ChannelPromise onDone, Netty4ChunkedHttpResponse response) {}
@@ -79,8 +86,14 @@ public class Netty4HttpPipeliningHandler extends ChannelDuplexHandler {
      * to the channel at the moment needlessly in case compression is used which creates buffers containing the compressed content
      * in {@link io.netty.handler.codec.http.HttpContentCompressor#write}.
      */
+    /**
+     * 这个队列是用来做写入请求时，如果写入请求过大，则先缓存在当前队列里
+     */
     private final Queue<WriteOperation> queuedWrites = new ArrayDeque<>();
 
+    /**
+     * bind socket 通信能力，主要通过serverTransport
+     */
     private final Netty4HttpServerTransport serverTransport;
 
     /**

@@ -336,6 +336,9 @@ public class TransportService extends AbstractLifecycleComponent
                 logger.info("profile [{}]: {}", entry.getKey(), entry.getValue());
             }
         }
+        /**
+         * 如果netty socket bild成功，那么代表这个节点可以作为一个发现节点进行工作了，这里也代表这个节点已经正常启动，监听port并告诉cluster已经就绪
+         */
         localNode = localNodeFactory.apply(transport.boundAddress());
 
         if (remoteClusterClient) {

@@ -300,6 +300,25 @@ public class Node implements Closeable {
 
     private static final String CLIENT_TYPE = "node";
 
+    /**
+     * 一个node的生命周期，是通过一个volatile 的标记量决定的，它的轨迹是固定的：
+     * INITIALIZED -> STARTED, STOPPED, CLOSED
+     * STARTED -> STOPPED
+     * STOPPED -> STARTED, CLOSED
+     *
+     * 它就是通过同步锁来控制状态的流转，所以它是一个线程安全类
+     * public void close() {
+     *    synchronized (lifecycleState) {
+     *        if (lifecycleState. started()) {
+     *            stop();
+     *        }
+     *        if (lifecycleState. moveToClosed() == false) {
+     *            return;
+     *        }
+     *    }
+     *   }
+     *
+     */
     private final Lifecycle lifecycle = new Lifecycle();
 
     /**
@@ -1417,30 +1436,60 @@ public class Node implements Closeable {
         if (ReadinessService.enabled(environment)) {
             injector.getInstance(ReadinessService.class).start();
         }
+        /**
+         * 先从当前client中抽象出一个NodeClient ，用于后续执行各种通知，先单例化
+         */
         injector.getInstance(MappingUpdatedAction.class).setClient(client);
+        /**
+         * elastic最重要的task manager，启动indices的定时刷新任务
+         */
         injector.getInstance(IndicesService.class).start();
+        /**
+         * 对包含数据节点的索引状态做同步
+         */
         injector.getInstance(IndicesClusterStateService.class).start();
         injector.getInstance(SnapshotsService.class).start();
         injector.getInstance(SnapshotShardsService.class).start();
         injector.getInstance(RepositoriesService.class).start();
+        /**
+         * 数据节点search的检索组件，它不光处理了action相关的操作，而是通过构造器实现了一系列的读取
+         */
         injector.getInstance(SearchService.class).start();
         injector.getInstance(FsHealthService.class).start();
+        /**
+         * 再开启一个gc的监控
+         */
         nodeService.getMonitorService().start();
 
+        /**
+         * 从这里就开始获取核心的组件并运行了，
+         * cluster 负责处理集群节点信息的维护
+         * node Connection 负责节点间的通信
+         */
         final ClusterService clusterService = injector.getInstance(ClusterService.class);
 
         final NodeConnectionsService nodeConnectionsService = injector.getInstance(NodeConnectionsService.class);
         nodeConnectionsService.start();
         clusterService.setNodeConnectionsService(nodeConnectionsService);
 
+        /**
+         * 集群内每个节点都可以充当Coordinator 调度节点，那么就把它和master绑定起来
+         */
         injector.getInstance(GatewayService.class).start();
         final Coordinator coordinator = injector.getInstance(Coordinator.class);
         clusterService.getMasterService().setClusterStatePublisher(coordinator);
 
+        /**
+         * 然后在通过transport进行通信，其中这里核心的代码设计是taskManager
+         * 这里transport的运行，大胆猜测是创建了一个netty的通道用于消息通知
+         */
         // Start the transport service now so the publish address will be added to the local disco node in ClusterService
         TransportService transportService = injector.getInstance(TransportService.class);
         transportService.getTaskManager().setTaskResultsService(injector.getInstance(TaskResultsService.class));
         transportService.getTaskManager().setTaskCancellationService(new TaskCancellationService(transportService));
+        /**
+         * 这里先暴露transport的通信端口，对应的是transport.port
+         */
         transportService.start();
         assert localNodeFactory.getNode() != null;
         assert transportService.getLocalNode().equals(localNodeFactory.getNode())
@@ -1492,6 +1541,9 @@ public class Node implements Closeable {
             fileSettingsService.addFileChangedListener(injector.getInstance(ReadinessService.class));
         }
 
+        /**
+         * 这里，基本node节点已经运行，那么将cluster相关的数据和协调者打开，确保可以正常通信
+         */
         clusterService.addStateApplier(transportService.getTaskManager());
         // start after transport service so the local disco is known
         coordinator.start(); // start before cluster service so that it can set initial state on ClusterApplierService
@@ -1513,6 +1565,9 @@ public class Node implements Closeable {
             ClusterState clusterState = clusterService.state();
             ClusterStateObserver observer = new ClusterStateObserver(clusterState, clusterService, null, logger, thread.getThreadContext());
 
+            /**
+             * 如果当前节点中还没有同步到master的节点，那么就尝试countdown并阻塞，等待指定时间间隔后，再进行尝试
+             */
             if (clusterState.nodes().getMasterNodeId() == null) {
                 logger.debug("waiting to join the cluster. timeout [{}]", initialStateTimeout);
                 final CountDownLatch latch = new CountDownLatch(1);
@@ -1542,6 +1597,9 @@ public class Node implements Closeable {
             }
         }
 
+        /**
+         * 这里再暴露http.port， 通过netty的实现方式
+         */
         injector.getInstance(HttpServerTransport.class).start();
 
         if (WRITE_PORTS_FILE_SETTING.get(settings())) {

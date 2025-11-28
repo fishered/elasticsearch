@@ -454,8 +454,16 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             .toList();
     }
 
+    /**
+     * 这是 内部transport和外部server的核心监听
+     *
+     * @param profileSettings
+     */
     protected void bindServer(ProfileSettings profileSettings) {
         // Bind and start to accept incoming connections.
+        /**
+         * 1.将当前host映射成地址表，
+         */
         InetAddress[] hostAddresses;
         List<String> profileBindHosts = profileSettings.bindHosts;
         try {
@@ -473,6 +481,9 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
 
         assert hostAddresses.length > 0;
 
+        /**
+         * 2.将当前address port进行绑定
+         */
         List<InetSocketAddress> boundAddresses = new ArrayList<>();
         for (InetAddress hostAddress : hostAddresses) {
             boundAddresses.add(bindToPort(profileSettings.profileName, hostAddress, profileSettings.portOrRange));
@@ -480,6 +491,9 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
 
         final BoundTransportAddress boundTransportAddress = createBoundTransportAddress(profileSettings, boundAddresses);
 
+        /**
+         * 写入内部的地址表，方便后续寻找
+         */
         if (profileSettings.isDefaultProfile) {
             this.boundAddress = boundTransportAddress;
         } else {
